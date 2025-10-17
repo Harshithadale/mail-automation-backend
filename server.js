@@ -23,7 +23,7 @@ connectDB();
 // Middlewares
 app.use(express.json());
 app.use(cors({
-  origin: ['https://mail-automation-git-main-dale-harshithas-projects.vercel.app?_vercel_share=zeqiNK24LazRAqAnEsy4b4Q5gHmZNg6L'], 
+  origin: ['https://mail-automation-git-main-dale-harshithas-projects.vercel.app'], 
   credentials: true
 }));
 
