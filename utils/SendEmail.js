@@ -1,38 +1,46 @@
-import nodemailer from "nodemailer";
+import nodemailer from 'nodemailer';
 
 export const SendEmail = async (to, subject, html, campaignId = null, plink = null) => {
   try {
-    const transporter = nodemailer.createTransport({
-      host: "smtp.gmail.com",
-      port: 465,
-      secure: true, // true for 465, false for 587
-      auth: {
-        user: process.env.EMAIL_USER, // your Gmail address
-        pass: process.env.EMAIL_PASS, // App Password (not your real password)
-      },
-    });
+    // console.log("📧 [SendEmail] Preparing to send email...");
+    // console.log("📥 To:", to);
+    // console.log("🔖 Campaign ID:", campaignId);
+    // console.log("🔗 Campaign Link (plink):", plink);
+
+   const transporter = nodemailer.createTransport({
+  host: "smtp.gmail.com",
+  port: 465,
+  secure: true, // true for 465, false for other ports
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
+
 
     await transporter.verify();
+    // console.log("✅ [SendEmail] Transporter verified");
 
     let finalHtml = html;
 
-    // ✅ Use deployed backend URL (not localhost)
     if (campaignId && plink) {
-      const trackingUrl = `https://your-deployed-backend.com/api/track/click?recipient=${encodeURIComponent(
-        to
-      )}&campaignId=${campaignId}&redirect=${encodeURIComponent(plink)}`;
+      const trackingUrl = `http://localhost:8000/api/track/click?recipient=${encodeURIComponent(to)}&campaignId=${campaignId}&redirect=${encodeURIComponent(plink)}`;
 
-      const linkRegex = new RegExp(`<a\\s+href=["']${plink}["'].*?>(.*?)<\\/a>`, "gi");
+      // Regex to match anchor tags that point directly to the plink
+      const linkRegex = new RegExp(`<a\\s+href=["']${plink}["'].*?>(.*?)<\\/a>`, 'gi');
 
       if (linkRegex.test(finalHtml)) {
-        finalHtml = finalHtml.replace(
-          linkRegex,
-          `<a href="${trackingUrl}" target="_blank" rel="noopener noreferrer">Visit Our Site</a>`
-        );
+finalHtml = finalHtml.replace(
+  linkRegex,
+  `<a href="${trackingUrl}">https://tomato-food-del-tau.vercel.app</a>`
+);
+        console.log("🔁 [SendEmail] Replaced existing plink with tracking URL");
       } else {
+        // Append the link if it doesn't exist in the email body
         finalHtml += `<div style="margin-top:20px;">
           <a href="${trackingUrl}" style="font-size:14px;">${plink}</a>
         </div>`;
+        // console.log("➕ [SendEmail] Appended plink with tracking URL to email body");
       }
     }
 
@@ -43,9 +51,8 @@ export const SendEmail = async (to, subject, html, campaignId = null, plink = nu
       html: finalHtml,
     });
 
-    console.log("✅ Email Sent:", info.messageId, info.accepted, info.rejected);
+    // console.log("✅ [SendEmail] Email sent successfully:", info.response);
   } catch (err) {
-    console.error("❌ Email Send Error:", err.message);
+    console.error("❌ [SendEmail] Error:", err.message);
   }
 };
-
