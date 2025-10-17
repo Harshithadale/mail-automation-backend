@@ -7,16 +7,13 @@ export const SendEmail = async (to, subject, html, campaignId = null, plink = nu
     // console.log("🔖 Campaign ID:", campaignId);
     // console.log("🔗 Campaign Link (plink):", plink);
 
-   const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 465,
-  secure: true, // true for 465, false for other ports
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
-
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
 
     await transporter.verify();
     // console.log("✅ [SendEmail] Transporter verified");
@@ -24,7 +21,7 @@ export const SendEmail = async (to, subject, html, campaignId = null, plink = nu
     let finalHtml = html;
 
     if (campaignId && plink) {
-      const trackingUrl = `http://localhost:8000/api/track/click?recipient=${encodeURIComponent(to)}&campaignId=${campaignId}&redirect=${encodeURIComponent(plink)}`;
+      const trackingUrl = `https://mail-automation-backend-fxq5.onrender.com/api/track/click?recipient=${encodeURIComponent(to)}&campaignId=${campaignId}&redirect=${encodeURIComponent(plink)}`;
 
       // Regex to match anchor tags that point directly to the plink
       const linkRegex = new RegExp(`<a\\s+href=["']${plink}["'].*?>(.*?)<\\/a>`, 'gi');
