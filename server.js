@@ -3,7 +3,8 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
 import { connectDB } from "./Config/db.js";
-
+import path from "path";
+const __dirname = path.resolve();
 // Routes
 import userRouter from "./Routes/UserRoute.js";
 import campaignRoutes from "./Routes/CampaignRoute.js";
@@ -22,13 +23,14 @@ connectDB();
 // Middlewares
 app.use(express.json());
 app.use(cors({
-  origin: ['https://mail-automation-git-master-dale-harshithas-projects.vercel.app'], 
+  origin: ['http://localhost:5173'], 
   credentials: true
 }));
 
 app.use(cookieParser());
 
 // API Routes
+app
 app.use("/api/user", userRouter);          // Auth: register, login
 app.use("/api/campaign", campaignRoutes);  // Campaign create, fetch
 app.use("/api/simulate", simulateRoutes);  // Execute campaign
@@ -40,6 +42,8 @@ app.use("/api/users",ProfileRoutes)
 app.get("/", (req, res) => {
   res.send("API Working 🎯");
 });
+
+
 
 // Start server
 app.listen(port, () => {
