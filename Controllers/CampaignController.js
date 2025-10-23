@@ -1,30 +1,27 @@
 import Campaign from '../Models/Campaign.js';
 import TrackingModel from '../Models/TrackingModel.js';
 import Myusers from '../Models/Myusers.js';
-import { executeFlow } from '../utils/FlowExecutor.js';
+import { SendEmail } from '../utils/SendEmail.js';
 
-// ---------------- Create Campaign ----------------
-export const createCampaign = async (req, res) => {
-  try {
-    const { title, subject, htmlContent, link } = req.body;
-    if (!title || !subject || !htmlContent) {
-      return res.status(400).json({ error: 'Title, subject, and htmlContent are required' });
+// ---------------- Execute flow safely ----------------
+export const executeFlow = async (campaign, recipients, customBody = null) => {
+  let successCount = 0;
+  let failedRecipients = [];
+
+  for (const recipient of recipients) {
+    try {
+      await SendEmail(recipient, campaign.subject, customBody || campaign.html);
+      successCount++;
+    } catch (err) {
+      console.error(`❌ Failed to send email to ${recipient}:`, err.message);
+      failedRecipients.push(recipient);
     }
-
-    const newCampaign = new Campaign({
-      title,
-      subject,
-      htmlContent,
-      link: link || null,
-      createdBy: req.user._id, // assuming protect middleware adds req.user
-    });
-
-    const savedCampaign = await newCampaign.save();
-    res.status(201).json({ message: '✅ Campaign created successfully', campaign: savedCampaign });
-  } catch (err) {
-    console.error('createCampaign error:', err);
-    res.status(500).json({ error: 'Server error while creating campaign' });
   }
+
+  console.log(`✅ Emails sent: ${successCount}`);
+  if (failedRecipients.length > 0) console.log('❌ Failed recipients:', failedRecipients);
+
+  return { successCount, failedRecipients };
 };
 
 // ---------------- Trigger Campaign ----------------
@@ -36,23 +33,25 @@ export const triggerCampaign = async (req, res) => {
     const campaign = await Campaign.findById(campaignId);
     if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
 
-    const users = await Myusers.find({});
-    if (!users.length) return res.status(400).json({ error: 'No recipients found' });
+    const users = await Myusers.find({}).select('email');
+    if (users.length === 0) return res.status(400).json({ error: 'No recipients found' });
 
-    const recipients = users.map(u => u.email);
-    const results = await executeFlow(campaign, recipients);
+    const recipients = users.map(u => u.email).filter(Boolean); // remove empty emails
+
+    const { successCount, failedRecipients } = await executeFlow(campaign, recipients);
 
     res.status(200).json({
-      message: `✅ Campaign completed. Sent: ${results.filter(r => r.status === 'sent').length}, Failed: ${results.filter(r => r.status === 'failed').length}`,
-      results
+      message: `Campaign finished: ${successCount} emails sent`,
+      failedRecipients
     });
+
   } catch (err) {
-    console.error('triggerCampaign error:', err);
+    console.error('TriggerCampaign error:', err);
     res.status(500).json({ error: 'Server error while executing campaign' });
   }
 };
 
-// ---------------- Delay Send ----------------
+// ---------------- Delay Campaign ----------------
 export const delaySend = async (req, res) => {
   const { campaignId, delayInMs } = req.body;
   if (!campaignId || !delayInMs) return res.status(400).json({ error: 'Missing campaignId or delayInMs' });
@@ -61,29 +60,26 @@ export const delaySend = async (req, res) => {
     const campaign = await Campaign.findById(campaignId);
     if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
 
-    const recipients = await Myusers.find({}).distinct('email');
-    if (!recipients.length) return res.status(400).json({ error: 'No recipients found' });
+    const users = await Myusers.find({}).select('email');
+    const recipients = users.map(u => u.email).filter(Boolean);
+    if (recipients.length === 0) return res.status(400).json({ error: 'No recipients found' });
 
     setTimeout(async () => {
-      try {
-        console.log("⏰ Delay completed. Sending follow-up campaign...");
-        await executeFlow(campaign, recipients);
-      } catch (err) {
-        console.error('Error executing delayed campaign:', err);
-      }
+      console.log(`⏰ Delay completed. Sending campaign "${campaign.subject}"`);
+      await executeFlow(campaign, recipients);
     }, delayInMs);
 
     res.json({ message: `Scheduled to send in ${delayInMs / 1000 / 60} minutes` });
   } catch (err) {
-    console.error('delaySend error:', err);
+    console.error('DelaySend error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 };
 
-// ---------------- Condition Send ----------------
+// ---------------- Condition Campaign ----------------
 export const conditionSend = async (req, res) => {
   const { campaignId, condition, emailBody } = req.body;
-  if (!campaignId || !condition || !emailBody) return res.status(400).json({ error: 'Missing campaignId, condition, or emailBody' });
+  if (!campaignId || !condition || !emailBody) return res.status(400).json({ error: 'Missing fields' });
 
   try {
     const campaign = await Campaign.findById(campaignId);
@@ -96,17 +92,17 @@ export const conditionSend = async (req, res) => {
     else if (condition.purchased === 'false') filter.purchased = false;
 
     const matchedUsers = await TrackingModel.find(filter).select('recipient');
-    const recipients = matchedUsers.map(u => u.recipient);
-    if (!recipients.length) return res.status(404).json({ error: 'No users matched the conditions' });
+    const recipients = matchedUsers.map(u => u.recipient).filter(Boolean);
+    if (recipients.length === 0) return res.status(404).json({ error: 'No users matched the condition' });
 
-    const results = await executeFlow(campaign, recipients, emailBody);
+    const { successCount, failedRecipients } = await executeFlow(campaign, recipients, emailBody);
 
     res.json({
-      message: `✅ Condition-based emails sent. Sent: ${results.filter(r => r.status === 'sent').length}, Failed: ${results.filter(r => r.status === 'failed').length}`,
-      results
+      message: `Condition campaign finished: ${successCount} emails sent`,
+      failedRecipients
     });
   } catch (err) {
-    console.error('conditionSend error:', err);
-    res.status(500).json({ error: 'Server error while processing condition node' });
+    console.error('ConditionSend error:', err);
+    res.status(500).json({ error: 'Server error while processing condition campaign' });
   }
 };
