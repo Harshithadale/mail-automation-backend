@@ -23,7 +23,7 @@ export const SendEmail = async (to, subject, html = '', campaignId = null, plink
     }
 
     await resend.emails.send({
-      from: "DelightLoop <noreply@resend.dev>",
+      from: "daleharshi6045@gmail.com",
       to,
       subject,
       html: finalHtml,
