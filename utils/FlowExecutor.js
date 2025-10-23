@@ -1,18 +1,28 @@
-import { SendEmail } from './SendEmail.js';
+import { SendEmail } from "./SendEmail.js";
 
-export const executeFlow = async (campaign, recipients, bodyOverride = null) => {
-  for (const recipient of recipients) {
+export const executeFlow = async (campaign, recipients, customBody = null) => {
+  if (!recipients || recipients.length === 0) return;
+
+  const results = [];
+
+  for (const email of recipients) {
     try {
       await SendEmail(
-        recipient,
-        campaign.title,
-        bodyOverride || campaign.body, 
+        email,
+        campaign.subject,
+        customBody || campaign.htmlContent,
         campaign._id,
-        campaign.plink
+        campaign.link
       );
-      console.log(`✅ Email sent to ${recipient}`);
+      results.push({ email, status: "sent" });
     } catch (err) {
-      console.error(`❌ Failed to send email to ${recipient}:`, err.message);
+      results.push({ email, status: "failed", error: err.message });
     }
+
+    // Optional delay to avoid rate limits
+    await new Promise(r => setTimeout(r, 500));
   }
+
+  return results;
 };
+

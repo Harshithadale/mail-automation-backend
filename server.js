@@ -30,7 +30,6 @@ app.use(cors({
 app.use(cookieParser());
 
 // API Routes
-app
 app.use("/api/user", userRouter);          // Auth: register, login
 app.use("/api/campaign", campaignRoutes);  // Campaign create, fetch
 app.use("/api/simulate", simulateRoutes);  // Execute campaign
