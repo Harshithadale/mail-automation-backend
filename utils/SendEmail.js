@@ -7,16 +7,21 @@ export const SendEmail = async (to, subject, html, campaignId, link) => {
   try {
     console.log(`📤 Sending to ${to} with subject "${subject}"`);
 
-    // Create transporter for Gmail
     const transporter = nodemailer.createTransport({
-      service: "gmail",
+      host: "smtp.gmail.com",
+      port: 465,
+      secure: true,
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
       },
+      tls: {
+        rejectUnauthorized: false,
+      },
+      logger: true,
+      debug: true,
     });
 
-    // Format HTML content (with plink and campaign info)
     const formattedHtml = `
       <div style="font-family:Arial, sans-serif; line-height:1.6; color:#333; padding:20px; background-color:#f9f9f9; border-radius:8px;">
         <h2 style="color:#0078D7;">${subject || "No Subject"}</h2>
@@ -33,14 +38,13 @@ export const SendEmail = async (to, subject, html, campaignId, link) => {
       </div>
     `;
 
-    const mailOptions = {
+    const info = await transporter.sendMail({
       from: `"Campaign Bot" <${process.env.EMAIL_USER}>`,
       to,
       subject: subject || "No Subject Provided",
       html: formattedHtml,
-    };
+    });
 
-    const info = await transporter.sendMail(mailOptions);
     console.log(`✅ Email sent to ${to}: ${info.response}`);
     return info;
   } catch (err) {
