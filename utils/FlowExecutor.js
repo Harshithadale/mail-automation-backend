@@ -8,12 +8,13 @@ export const executeFlow = async (campaign, recipients, customBody = null) => {
   for (const email of recipients) {
     try {
       await SendEmail(
-        email,
-        campaign.subject,
-        customBody || campaign.htmlContent,
-        campaign._id,
-        campaign.link
-      );
+  email,
+  campaign.title,
+  customBody || campaign.body,
+  campaign._id,
+  campaign.plink
+);
+
       results.push({ email, status: "sent" });
     } catch (err) {
       results.push({ email, status: "failed", error: err.message });

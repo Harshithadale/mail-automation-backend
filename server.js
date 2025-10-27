@@ -23,7 +23,10 @@ connectDB();
 // Middlewares
 app.use(express.json());
 app.use(cors({
-  origin: ['https://mail-automation-git-main-dale-harshithas-projects.vercel.app'], 
+  origin: [
+    'https://mail-automation-git-main-dale-harshithas-projects.vercel.app',
+    'http://localhost:5173', // or 3000 if using Create React App
+  ],
   credentials: true
 }));
 
