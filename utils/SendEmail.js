@@ -7,20 +7,18 @@ export const SendEmail = async (to, subject, html, campaignId, link) => {
   try {
     console.log(`📤 Sending to ${to} with subject "${subject}"`);
 
-    const transporter = nodemailer.createTransport({
-      host: "smtp.gmail.com",
-      port: 465,
-      secure: true,
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-      tls: {
-        rejectUnauthorized: false,
-      },
-      logger: true,
-      debug: true,
-    });
+  const transporter = nodemailer.createTransport({
+  host: "smtp.gmail.com",
+  port: 587,
+  secure: false, // TLS will be upgraded automatically
+  auth: {
+    user: process.env.EMAIL_USER, // your gmail
+    pass: process.env.EMAIL_PASS, // app password
+  },
+  tls: {
+    rejectUnauthorized: false, // allow TLS on some cloud hosts
+  },
+});
 
     const formattedHtml = `
       <div style="font-family:Arial, sans-serif; line-height:1.6; color:#333; padding:20px; background-color:#f9f9f9; border-radius:8px;">
